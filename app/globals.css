@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-playfair);
+
+  --color-maroon-50: #fef2f2;
+  --color-maroon-100: #ffe1e1;
+  --color-maroon-200: #ffc7c7;
+  --color-maroon-300: #ffa0a0;
+  --color-maroon-400: #fa6b6b;
+  --color-maroon-500: #f03e3e;
+  --color-maroon-600: #d92020;
+  --color-maroon-700: #b51515;
+  --color-maroon-800: #941515;
+  --color-maroon-900: #4A0404;
+  /* Primary Maroon */
+  --color-maroon-950: #3E000C;
+  /* Darkest Maroon */
+
+  --color-cream-50: #fdfdf8;
+  --color-cream-100: #fcfcf3;
+  --color-cream-200: #fafae6;
+  --color-cream-300: #F5F5DC;
+  /* Primary Cream */
+  --color-cream-400: #e6e6bd;
+  --color-cream-500: #d4d49a;
+
+  --color-gold-500: #D4AF37;
+}
+
+:root {
+  /* Maroon & Cream Theme */
+  --foreground-rgb: 74, 4, 4;
+  /* Maroon 900 */
+  --background-rgb: 251, 251, 246;
+  /* Cream 50ish */
+}
+
+body {
+  color: #1a1a1a;
+  background-color: #FDFDFB;
+  /* Light Cream */
+}
+
+@layer utilities {
+  .text-maroon {
+    color: var(--color-maroon-900);
+  }
+
+  .bg-maroon {
+    background-color: var(--color-maroon-900);
+  }
+
+  .bg-cream {
+    background-color: #F8F8F4;
+  }
+
+  .font-serif {
+    font-family: var(--font-playfair), serif;
+  }
+
+  .glass-card {
+    @apply bg-white border border-stone-200 shadow-sm transition-all duration-300;
+  }
+}
