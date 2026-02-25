@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Send, CheckCircle, AlertCircle } from 'lucide-react'
+import ReCAPTCHA from 'react-google-recaptcha'
+import type ReCAPTCHAType from 'react-google-recaptcha'
 import { supabase } from '@/lib/supabaseClient'
 
 interface FeedbackFormProps {
@@ -13,6 +15,8 @@ export default function FeedbackForm({ type }: FeedbackFormProps) {
     const [loading, setLoading] = useState(false)
     const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
     const [errorMessage, setErrorMessage] = useState('')
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+    const recaptchaRef = useRef<ReCAPTCHAType>(null)
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -32,6 +36,10 @@ export default function FeedbackForm({ type }: FeedbackFormProps) {
         setErrorMessage('')
 
         try {
+            if (!captchaToken) {
+                throw new Error('Please complete the CAPTCHA.')
+            }
+
             const response = await fetch('/api/complaints', {
                 method: 'POST',
                 headers: {
@@ -43,6 +51,7 @@ export default function FeedbackForm({ type }: FeedbackFormProps) {
                     description: formData.description,
                     category: formData.category,
                     contact_email: formData.contact_email,
+                    captchaToken,
                 }),
             })
 
@@ -54,6 +63,8 @@ export default function FeedbackForm({ type }: FeedbackFormProps) {
 
             setStatus('success')
             setFormData({ title: '', description: '', category: 'General', contact_email: '' })
+            setCaptchaToken(null)
+            recaptchaRef.current?.reset()
         } catch (error: any) {
             console.error('Submission error:', error)
             setStatus('error')
@@ -140,9 +151,18 @@ export default function FeedbackForm({ type }: FeedbackFormProps) {
                         </div>
                     )}
 
+                    <div className="flex justify-center">
+                        <ReCAPTCHA
+                            ref={recaptchaRef}
+                            sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                            onChange={(token: string | null) => setCaptchaToken(token)}
+                            onExpired={() => setCaptchaToken(null)}
+                        />
+                    </div>
+
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || !captchaToken}
                         className="w-full py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-lg hover:shadow-lg hover:shadow-blue-500/30 hover:scale-[1.02] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         {loading ? 'Sending...' : 'Submit Form'} <Send size={18} />

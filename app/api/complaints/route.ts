@@ -11,10 +11,61 @@ const supabase = (supabaseUrl && supabaseAnonKey)
     ? createClient(supabaseUrl, supabaseAnonKey)
     : null
 
+// --- Rate Limiting (in-memory, per IP) ---
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
+const RATE_LIMIT_MAX = 5 // max submissions per window
+const rateLimitMap = new Map<string, { count: number; firstRequest: number }>()
+
+function isRateLimited(ip: string): boolean {
+    const now = Date.now()
+    const entry = rateLimitMap.get(ip)
+
+    if (!entry || now - entry.firstRequest > RATE_LIMIT_WINDOW_MS) {
+        rateLimitMap.set(ip, { count: 1, firstRequest: now })
+        return false
+    }
+
+    entry.count++
+    return entry.count > RATE_LIMIT_MAX
+}
+// --- End Rate Limiting ---
+
 export async function POST(request: Request) {
     try {
+        // Rate limit check
+        const forwarded = request.headers.get('x-forwarded-for')
+        const ip = forwarded?.split(',')[0]?.trim() || 'unknown'
+
+        if (isRateLimited(ip)) {
+            return NextResponse.json(
+                { success: false, error: 'Too many submissions. Please try again later.' },
+                { status: 429 }
+            )
+        }
+
         const body = await request.json()
-        const { type, title, description, category, contact_email } = body
+        const { type, title, description, category, contact_email, captchaToken } = body
+
+        if (!captchaToken) {
+            return NextResponse.json(
+                { success: false, error: 'CAPTCHA token missing' },
+                { status: 400 }
+            )
+        }
+
+        // Verify CAPTCHA
+        const captchaSecret = process.env.RECAPTCHA_SECRET_KEY
+        const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${captchaSecret}&response=${captchaToken}`
+
+        const captchaRes = await fetch(verifyUrl, { method: 'POST' })
+        const captchaData = await captchaRes.json()
+
+        if (!captchaData.success) {
+            return NextResponse.json(
+                { success: false, error: 'CAPTCHA verification failed' },
+                { status: 400 }
+            )
+        }
 
         // 1. Store in Supabase (if configured)
         if (supabase) {
